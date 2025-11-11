@@ -3,236 +3,361 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Animation Principles: Bouncing Ball</title>
-    <!-- Load Tailwind CSS for styling -->
+    <title>Countdown Timer App</title>
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Tone.js for alarm sound -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Configure Tailwind theme -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#4F46E5', // Indigo-600
+                        'secondary': '#10B981', // Emerald-500
+                        'danger': '#EF4444', // Red-500
+                        'warning': '#F59E0B', // Amber-500
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Roboto Mono', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+    <!-- Load Inter and Roboto Mono fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
-        /* Use Inter font */
         body {
-            font-family: "Inter", sans-serif;
+            font-family: 'Inter', sans-serif;
         }
-
-        /* Animation Container */
-        #animation-container {
-            position: relative;
-            width: 100%;
-            max-width: 600px;
-            height: 450px;
-            background-color: #f0f4f8;
-            border-radius: 0.5rem;
-            overflow: hidden;
-            border: 1px solid #cbd5e1;
+        .timer-display {
+            text-shadow: 0 0 15px rgba(79, 70, 229, 0.5);
+            transition: color 0.3s ease;
         }
-
-        /* The Ball */
-        #ball {
-            position: absolute;
-            left: 50%;
-            top: 0;
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            border-radius: 50%;
-            /*
-                This is a key principle!
-                We set the transform origin to the bottom center.
-                This makes the "squash" happen at the point of impact,
-                not from the center of the ball.
-            */
-            transform: translateX(-50%);
-            transform-origin: 50% 100%;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        .input-field {
+            -moz-appearance: textfield; /* Firefox */
         }
-
-        /* The Ground */
-        #ground {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 20px;
-            background-color: #334155;
+        .input-field::-webkit-inner-spin-button, 
+        .input-field::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .input-group input {
+            text-align: center;
+            border-color: #374151; /* gray-700 */
+        }
+        /* Alarm animation for the modal */
+        @keyframes pulse-alarm {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 25px rgba(239, 68, 68, 0.8);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 45px rgba(239, 68, 68, 1);
+            }
+        }
+        .alarming {
+            animation: pulse-alarm 1s infinite alternate;
         }
     </style>
 </head>
-<body class="bg-gray-100 flex flex-col min-h-screen">
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
 
-    <!-- Navigation Bar -->
-    <nav class="bg-gray-800 text-white shadow-lg">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <!-- Logo/Brand -->
-                    <span class="text-2xl font-bold text-blue-400">Anim Principles</span>
-                </div>
-                <!-- Nav Links -->
-                <div class="hidden sm:flex sm:items-center sm:space-x-4">
-                    <a href="#" class="px-3 py-2 rounded-md text-sm font-medium text-white bg-gray-900" aria-current="page">Bouncing Ball</a>
-                    <a href="#" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">More Demos</a>
-                    <a href="#" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">About</a>
-                    <a href="#" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Contact</a>
-                </div>
-                <!-- Mobile Menu Button (placeholder) -->
-                <div class="sm:hidden flex items-center">
-                    <button class="text-gray-300 hover:text-white focus:outline-none">
-                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-                        </svg>
-                    </button>
-                </div>
+    <!-- Timer Card Container -->
+    <div class="w-full max-w-lg bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 border border-gray-700/50">
+        <h1 class="text-3xl font-bold text-center mb-6 text-primary tracking-wider">
+            Countdown Timer
+        </h1>
+        
+        <!-- Input Fields for Setting Time -->
+        <div id="inputControls" class="flex justify-center items-center space-x-2 mb-8 input-group">
+            <!-- Hours Input -->
+            <div class="flex flex-col items-center">
+                <input id="inputHours" type="number" min="0" max="99" value="00" 
+                       class="input-field w-16 md:w-20 text-center bg-gray-700 text-warning text-2xl font-mono p-2 rounded-lg border focus:border-warning/50 focus:ring focus:ring-warning/20 transition duration-150"
+                       oninput="validateInput(this)" maxlength="2">
+                <span class="text-sm mt-1 text-gray-400">Hours</span>
+            </div>
+
+            <span class="text-4xl text-gray-500 font-bold">:</span>
+
+            <!-- Minutes Input -->
+            <div class="flex flex-col items-center">
+                <input id="inputMinutes" type="number" min="0" max="59" value="05" 
+                       class="input-field w-16 md:w-20 text-center bg-gray-700 text-warning text-2xl font-mono p-2 rounded-lg border focus:border-warning/50 focus:ring focus:ring-warning/20 transition duration-150"
+                       oninput="validateInput(this)" maxlength="2">
+                <span class="text-sm mt-1 text-gray-400">Minutes</span>
+            </div>
+
+            <span class="text-4xl text-gray-500 font-bold">:</span>
+
+            <!-- Seconds Input -->
+            <div class="flex flex-col items-center">
+                <input id="inputSeconds" type="number" min="0" max="59" value="00" 
+                       class="input-field w-16 md:w-20 text-center bg-gray-700 text-warning text-2xl font-mono p-2 rounded-lg border focus:border-warning/50 focus:ring focus:ring-warning/20 transition duration-150"
+                       oninput="validateInput(this)" maxlength="2">
+                <span class="text-sm mt-1 text-gray-400">Seconds</span>
             </div>
         </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="flex-grow flex items-center justify-center p-4 my-8">
-        <div class="w-full max-w-4xl bg-white p-6 md:p-8 rounded-xl shadow-lg">
-            <header class="text-center mb-6">
-                            Notice how the ball stretches as it falls (gaining speed) and squashes flat when it hits the ground. This gives it a sense of mass and flexibility.
-                        </p>
-                    </li>
-                    <li>
-                        <strong class="text-blue-600">Timing & Spacing (Ease-In/Out)</strong>
-                        <p class="text-gray-700 text-sm">
-                            The ball accelerates due to gravity (spacing increases) and decelerates as it rises (spacing decreases). It "eases" (slows) into the peak of its arc before falling again.
-                        </p>
-                    </li>
-                    <li>
-                        <strong class="text-blue-600">Arcs</strong>
-                        <p class="text-gray-700 text-sm">
-                            While this is a simple vertical bounce, the physics engine creates a natural parabolic arc for the ball's movement over time.
-                        </p>
-                    </li>
-                </ul>
-            </div>
+        
+        <!-- Timer Display (Shows HH:MM:SS) -->
+        <div id="timerDisplay" class="timer-display font-mono text-6xl md:text-8xl font-extrabold text-center mb-10 p-4 rounded-xl bg-gray-900/50 border border-primary/20 text-primary">
+            00:05:00
         </div>
-    </main>
 
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-gray-400 text-center p-6 mt-auto">
-        <p>&copy; 2025 Animation Principles. All rights reserved.</p>
-    </footer>
+        <!-- Controls Area -->
+        <div class="flex flex-wrap justify-center gap-4">
 
+            <!-- Start/Resume Button -->
+            <button id="startButton" onclick="toggleTimer()"
+                    class="flex-1 min-w-[120px] py-3 px-6 bg-secondary text-gray-900 font-semibold rounded-xl shadow-lg hover:bg-secondary/80 focus:outline-none focus:ring-4 focus:ring-secondary/50 transition duration-150 transform hover:scale-[1.02]">
+                Start
+            </button>
+
+            <!-- Reset Button -->
+            <button id="resetButton" onclick="resetTimer()"
+                    class="flex-1 min-w-[120px] py-3 px-6 bg-danger text-white font-semibold rounded-xl shadow-lg opacity-50 cursor-not-allowed hover:bg-danger/80 focus:outline-none focus:ring-4 focus:ring-danger/50 transition duration-150 transform hover:scale-[1.02]">
+                Reset
+            </button>
+        </div>
+    </div>
+
+    <!-- Alarm Modal -->
+    <div id="alarmModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" onclick="stopAlarm()">
+        <div id="modalContent" class="bg-red-600 alarming text-white p-8 rounded-2xl shadow-2xl text-center w-full max-w-sm" onclick="event.stopPropagation()">
+            <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 class="text-4xl font-extrabold mb-2">TIME'S UP!</h2>
+            <p class="mb-6 text-lg">Your countdown has finished.</p>
+            <button onclick="stopAlarm()" class="py-2 px-6 bg-white text-red-600 font-bold rounded-xl shadow-lg hover:bg-gray-100 transition duration-150">
+                STOP ALARM
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Get elements
-            const ball = document.getElementById('ball');
-            const container = document.getElementById('animation-container');
-            const ground = document.getElementById('ground');
-            const startButton = document.getElementById('start-button');
-            const resetButton = document.getElementById('reset-button');
+        // Tone.js Synth for the alarm
+        const synth = new Tone.MembraneSynth().toDestination();
+        const alarmDuration = 10; // seconds the alarm should run
 
-            // --- Physics & Animation State ---
-            let positionY = 0;          // Initial position (top)
-            let velocityY = 0;          // Initial velocity
-            const gravity = 0.7;        // Acceleration due to gravity
-            const damping = 0.75;       // Energy loss on bounce (0 to 1)
-            let isAnimating = false;    // Animation loop flag
-            let animationFrameId = null; // To start/stop the loop
+        // Global variables for the timer state
+        let totalTimeInMs = 0; // Total duration set by user in milliseconds
+        let remainingTimeInMs = 0; // Time left on the timer
+        let timerInterval = null;
+        let isRunning = false;
+        let isAlarming = false;
+        let alarmTimeout = null;
 
-            // --- Boundaries ---
-            let groundY;
-            let ballHeight;
+        // DOM elements
+        const inputHours = document.getElementById('inputHours');
+        const inputMinutes = document.getElementById('inputMinutes');
+        const inputSeconds = document.getElementById('inputSeconds');
+        const inputControls = document.getElementById('inputControls');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const alarmModal = document.getElementById('alarmModal');
+        const modalContent = document.getElementById('modalContent');
 
-            function calculateBoundaries() {
-                // Get dynamic heights
-                groundY = container.clientHeight - ground.clientHeight;
-                ballHeight = ball.clientHeight;
+        // --- Helper Functions ---
+
+        // Input validation and padding
+        function validateInput(input) {
+            let val = parseInt(input.value) || 0;
+            const max = parseInt(input.getAttribute('max'));
+            
+            if (input.id !== 'inputHours') {
+                val = Math.min(val, max);
             }
             
-            // Initial boundary calculation
-            calculateBoundaries();
+            input.value = String(val).padStart(2, '0');
+            // Recalculate and update the display when inputs change
+            updateTotalTime(); 
+        }
+
+        // Calculates total time in MS from inputs
+        function updateTotalTime() {
+            const h = parseInt(inputHours.value) || 0;
+            const m = parseInt(inputMinutes.value) || 0;
+            const s = parseInt(inputSeconds.value) || 0;
+
+            totalTimeInMs = (h * 3600 + m * 60 + s) * 1000;
+            remainingTimeInMs = totalTimeInMs;
+
+            timerDisplay.textContent = formatTime(remainingTimeInMs);
+            updateUI('stopped');
+        }
+
+        // Format milliseconds into HH:MM:SS
+        function formatTime(timeInMs) {
+            const totalSeconds = Math.max(0, Math.floor(timeInMs / 1000));
             
-            // Recalculate on window resize
-            window.addEventListener('resize', calculateBoundaries);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
 
-            // --- The Animation Loop ---
-            function animate() {
-                // 1. Apply Physics
-                velocityY += gravity;     // Gravity pulls ball down
-                positionY += velocityY;     // Update position
+            const displayHours = String(hours).padStart(2, '0');
+            const displayMinutes = String(minutes).padStart(2, '0');
+            const displaySeconds = String(seconds).padStart(2, '0');
 
-                // 2. Collision Detection
-                if (positionY + ballHeight > groundY) {
-                    // Hit the ground
-                    positionY = groundY - ballHeight; // Snap to ground
-                    velocityY = -velocityY * damping; // Reverse and dampen velocity
-                
-                    // --- Squash & Stretch (on impact) ---
-                    // The squash is proportional to the impact velocity
-                    const impactStrength = Math.abs(velocityY);
-                    let squashY = Math.max(0.4, 1 - impactStrength * 0.03); // Min 40% height
-                    let squashX = 1 + (1 - squashY); // Conserve volume
-                    
-                    // Apply squash transform
-                    ball.style.transform = `translateX(-50%) translateY(${positionY}px) scale(${squashX}, ${squashY})`;
+            return `${displayHours}:${displayMinutes}:${displaySeconds}`;
+        }
 
-                    // Dampen further if velocity is very low to stop animation
-                    if (Math.abs(velocityY) < 2) {
-                        velocityY = 0;
-                    }
+        // --- Core Timer Logic ---
 
-                } else {
-                    // --- Squash & Stretch (in the air) ---
-                    // The stretch is proportional to the falling speed
-                    let stretchY = 1 + Math.abs(velocityY) * 0.01;
-                    stretchY = Math.min(stretchY, 1.25); // Max 25% stretch
-                    let stretchX = 1 - (stretchY - 1); // Conserve volume
-                    
-                    // Apply air transform
-                    ball.style.transform = `translateX(-50%) translateY(${positionY}px) scale(${stretchX}, ${stretchY})`;
-                }
-
-                // 3. Stop Condition
-                // If ball is on ground and not moving, stop.
-                if (Math.abs(velocityY) === 0 && positionY + ballHeight >= groundY) {
-                    stopAnimation();
-                    // Final reset to perfect circle
-                    ball.style.transform = `translateX(-50%) translateY(${positionY}px) scale(1, 1)`;
-                    return; 
-                }
-
-                // 4. Continue Loop
-                if (isAnimating) {
-                    animationFrameId = requestAnimationFrame(animate);
-                }
+        function updateTimer() {
+            if (remainingTimeInMs <= 0) {
+                clearInterval(timerInterval);
+                remainingTimeInMs = 0;
+                isRunning = false;
+                timerDisplay.textContent = "00:00:00";
+                updateUI('finished');
+                triggerAlarm();
+                return;
             }
 
-            // --- Control Functions ---
-            function startAnimation() {
-                if (isAnimating) return; // Already running
-                isAnimating = true;
+            remainingTimeInMs -= 1000; // Decrease by 1 second (1000ms)
+            timerDisplay.textContent = formatTime(remainingTimeInMs);
+        }
+        
+        function toggleTimer() {
+            if (isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        }
+
+        function startTimer() {
+            if (totalTimeInMs <= 0) {
+                // Check if any time has been set
+                console.log("Please set a time greater than zero.");
+                timerDisplay.textContent = "Set Time!";
+                setTimeout(() => timerDisplay.textContent = formatTime(remainingTimeInMs), 1500);
+                return;
+            }
+            
+            // Only update remainingTimeInMs if it's the very first start 
+            // after a reset, otherwise use the paused value.
+            if (remainingTimeInMs === 0 || remainingTimeInMs === totalTimeInMs) {
+                 remainingTimeInMs = totalTimeInMs;
+            }
+
+            timerInterval = setInterval(updateTimer, 1000);
+            isRunning = true;
+            updateUI('running');
+        }
+
+        function pauseTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            updateUI('paused');
+        }
+
+        function resetTimer() {
+            if (isAlarming) {
+                stopAlarm();
+            }
+            clearInterval(timerInterval);
+            isRunning = false;
+            remainingTimeInMs = totalTimeInMs; // Reset remaining time to the full duration
+            timerDisplay.textContent = formatTime(totalTimeInMs);
+            updateUI('stopped');
+        }
+
+        // --- Alarm and UI Functions ---
+        
+        function triggerAlarm() {
+            isAlarming = true;
+            alarmModal.classList.remove('hidden');
+            
+            // The alarm sound sequence
+            const playAlarm = () => {
+                 // Synth plays a quick sequence of notes C3-G3-C4
+                 synth.triggerAttackRelease('C3', '8n', Tone.now());
+                 synth.triggerAttackRelease('G3', '8n', Tone.now() + 0.25);
+                 synth.triggerAttackRelease('C4', '4n', Tone.now() + 0.5);
+            };
+
+            // Play the alarm every second for the alarm duration
+            playAlarm(); 
+            timerInterval = setInterval(playAlarm, 1000); 
+
+            // Set a failsafe timeout to stop the alarm after 10 seconds if user doesn't stop it
+            alarmTimeout = setTimeout(stopAlarm, alarmDuration * 1000);
+        }
+
+        function stopAlarm() {
+            if (!isAlarming) return;
+            
+            clearInterval(timerInterval); // Clear the flashing/sound interval
+            clearTimeout(alarmTimeout); // Clear the failsafe timeout
+            isAlarming = false;
+            
+            alarmModal.classList.add('hidden');
+            modalContent.classList.remove('alarming');
+            
+            // Re-establish 'stopped' UI state after alarm is dismissed
+            updateUI('stopped');
+        }
+
+        function updateUI(state) {
+            // Disable/Enable input fields
+            const inputs = [inputHours, inputMinutes, inputSeconds];
+            inputs.forEach(input => input.disabled = (state === 'running'));
+
+            // Reset/Start Button States
+            if (state === 'running') {
                 startButton.textContent = 'Pause';
-                animate();
-            }
+                startButton.classList.replace('bg-secondary', 'bg-warning');
+                startButton.classList.remove('hover:bg-secondary/80');
+                startButton.classList.add('hover:bg-warning/80');
 
-            function stopAnimation() {
-                if (!isAnimating) return; // Already stopped
-                isAnimating = false;
+                resetButton.disabled = false;
+                resetButton.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                timerDisplay.classList.add('text-secondary');
+                timerDisplay.classList.remove('text-primary', 'text-warning');
+
+            } else if (state === 'paused') {
+                startButton.textContent = 'Resume';
+                startButton.classList.replace('bg-warning', 'bg-secondary');
+                startButton.classList.remove('hover:bg-warning/80');
+                startButton.classList.add('hover:bg-secondary/80');
+                
+                timerDisplay.classList.add('text-warning');
+                timerDisplay.classList.remove('text-secondary', 'text-primary');
+
+            } else if (state === 'stopped' || state === 'finished') {
                 startButton.textContent = 'Start';
-                if (animationFrameId) {
-                    cancelAnimationFrame(animationFrameId);
-                }
-            }
-
-            function resetAnimation() {
-                stopAnimation();
-                positionY = 0;
-                velocityY = 0;
-                ball.style.transform = 'translateX(-50%) translateY(0px) scale(1, 1)';
-            }
-
-            // --- Event Listeners ---
-            startButton.addEventListener('click', () => {
-                if (isAnimating) {
-                    stopAnimation();
+                startButton.classList.replace('bg-warning', 'bg-secondary');
+                startButton.classList.remove('hover:bg-warning/80');
+                startButton.classList.add('hover:bg-secondary/80');
+                
+                resetButton.disabled = (totalTimeInMs === 0);
+                if (totalTimeInMs === 0) {
+                     resetButton.classList.add('opacity-50', 'cursor-not-allowed');
                 } else {
-                    startAnimation();
+                     resetButton.classList.remove('opacity-50', 'cursor-not-allowed');
                 }
-            });
 
-            resetButton.addEventListener('click', resetAnimation);
-        });
+                timerDisplay.classList.add('text-primary');
+                timerDisplay.classList.remove('text-secondary', 'text-warning');
+            }
+        }
+
+        // --- Initialization ---
+        window.onload = () => {
+            // Set initial total time and display from default input values (00:05:00)
+            updateTotalTime(); 
+        };
+
     </script>
 </body>
 </html>
