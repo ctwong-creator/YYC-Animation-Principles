@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animation Principles: Bouncing Ball</title>
+    <!-- Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Use Inter font */
+        body {
+            font-family: "Inter", sans-serif;
+        }
+
+        /* Animation Container */
+        #animation-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 450px;
+            background-color: #f0f4f8;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+        }
+
+        /* The Ball */
+        #ball {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 50%;
+            /*
+                This is a key principle!
+                We set the transform origin to the bottom center.
+                This makes the "squash" happen at the point of impact,
+                not from the center of the ball.
+            */
+            transform: translateX(-50%);
+            transform-origin: 50% 100%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        /* The Ground */
+        #ground {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background-color: #334155;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl bg-white p-6 md:p-8 rounded-xl shadow-lg">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Animation Principles</h1>
+            <p class="text-lg text-gray-600">Demonstrating a Bouncing Ball</p>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- Left Side: Animation -->
+            <div class="flex-grow">
+                <div id="animation-container" class="mx-auto">
+                    <div id="ball"></div>
+                    <div id="ground"></div>
+                </div>
+                <!-- Controls -->
+                <div class="flex justify-center gap-4 mt-6">
+                    <button id="start-button" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                        Start
+                    </button>
+                    <button id="reset-button" class="px-6 py-2 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 transition-all focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50">
+                        Reset
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Right Side: Explanation -->
+            <div class="w-full lg:w-1/3 bg-gray-50 p-6 rounded-lg border">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Principles Shown:</h2>
+                <ul class="space-y-4">
+                    <li>
+                        <strong class="text-blue-600">Squash & Stretch</strong>
+                        <p class="text-gray-700 text-sm">
+                            Notice how the ball stretches as it falls (gaining speed) and squashes flat when it hits the ground. This gives it a sense of mass and flexibility.
+                        </p>
+                    </li>
+                    <li>
+                        <strong class="text-blue-600">Timing & Spacing (Ease-In/Out)</strong>
+                        <p class="text-gray-700 text-sm">
+                            The ball accelerates due to gravity (spacing increases) and decelerates as it rises (spacing decreases). It "eases" (slows) into the peak of its arc before falling again.
+                        </p>
+                    </li>
+                    <li>
+                        <strong class="text-blue-600">Arcs</strong>
+                        <p class="text-gray-700 text-sm">
+                            While this is a simple vertical bounce, the physics engine creates a natural parabolic arc for the ball's movement over time.
+                        </p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get elements
+            const ball = document.getElementById('ball');
+            const container = document.getElementById('animation-container');
+            const ground = document.getElementById('ground');
+            const startButton = document.getElementById('start-button');
+            const resetButton = document.getElementById('reset-button');
+
+            // --- Physics & Animation State ---
+            let positionY = 0;          // Initial position (top)
+            let velocityY = 0;          // Initial velocity
+            const gravity = 0.7;        // Acceleration due to gravity
+            const damping = 0.75;       // Energy loss on bounce (0 to 1)
+            let isAnimating = false;    // Animation loop flag
+            let animationFrameId = null; // To start/stop the loop
+
+            // --- Boundaries ---
+            let groundY;
+            let ballHeight;
+
+            function calculateBoundaries() {
+                // Get dynamic heights
+                groundY = container.clientHeight - ground.clientHeight;
+                ballHeight = ball.clientHeight;
+            }
+            
+            // Initial boundary calculation
+            calculateBoundaries();
+            
+            // Recalculate on window resize
+            window.addEventListener('resize', calculateBoundaries);
+
+            // --- The Animation Loop ---
+            function animate() {
+                // 1. Apply Physics
+                velocityY += gravity;     // Gravity pulls ball down
+                positionY += velocityY;     // Update position
+
+                // 2. Collision Detection
+                if (positionY + ballHeight > groundY) {
+                    // Hit the ground
+                    positionY = groundY - ballHeight; // Snap to ground
+                    velocityY = -velocityY * damping; // Reverse and dampen velocity
+                
+                    // --- Squash & Stretch (on impact) ---
+                    // The squash is proportional to the impact velocity
+                    const impactStrength = Math.abs(velocityY);
+                    let squashY = Math.max(0.4, 1 - impactStrength * 0.03); // Min 40% height
+                    let squashX = 1 + (1 - squashY); // Conserve volume
+                    
+                    // Apply squash transform
+                    ball.style.transform = `translateX(-50%) translateY(${positionY}px) scale(${squashX}, ${squashY})`;
+
+                    // Dampen further if velocity is very low to stop animation
+                    if (Math.abs(velocityY) < 2) {
+                        velocityY = 0;
+                    }
+
+                } else {
+                    // --- Squash & Stretch (in the air) ---
+                    // The stretch is proportional to the falling speed
+                    let stretchY = 1 + Math.abs(velocityY) * 0.01;
+                    stretchY = Math.min(stretchY, 1.25); // Max 25% stretch
+                    let stretchX = 1 - (stretchY - 1); // Conserve volume
+                    
+                    // Apply air transform
+                    ball.style.transform = `translateX(-50%) translateY(${positionY}px) scale(${stretchX}, ${stretchY})`;
+                }
+
+                // 3. Stop Condition
+                // If ball is on ground and not moving, stop.
+                if (Math.abs(velocityY) === 0 && positionY + ballHeight >= groundY) {
+                    stopAnimation();
+                    // Final reset to perfect circle
+                    ball.style.transform = `translateX(-50%) translateY(${positionY}px) scale(1, 1)`;
+                    return; 
+                }
+
+                // 4. Continue Loop
+                if (isAnimating) {
+                    animationFrameId = requestAnimationFrame(animate);
+                }
+            }
+
+            // --- Control Functions ---
+            function startAnimation() {
+                if (isAnimating) return; // Already running
+                isAnimating = true;
+                startButton.textContent = 'Pause';
+                animate();
+            }
+
+            function stopAnimation() {
+                if (!isAnimating) return; // Already stopped
+                isAnimating = false;
+                startButton.textContent = 'Start';
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+            }
+
+            function resetAnimation() {
+                stopAnimation();
+                positionY = 0;
+                velocityY = 0;
+                ball.style.transform = 'translateX(-50%) translateY(0px) scale(1, 1)';
+            }
+
+            // --- Event Listeners ---
+            startButton.addEventListener('click', () => {
+                if (isAnimating) {
+                    stopAnimation();
+                } else {
+                    startAnimation();
+                }
+            });
+
+            resetButton.addEventListener('click', resetAnimation);
+        });
+    </script>
+</body>
+</html>
