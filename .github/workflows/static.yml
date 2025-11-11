@@ -1,43 +1,238 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animation Principles: Bouncing Ball</title>
+    <!-- Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Use Inter font */
+        body {
+            font-family: "Inter", sans-serif;
+        }
 
-on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: ["main"]
+        /* Animation Container */
+        #animation-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 450px;
+            background-color: #f0f4f8;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+        }
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+        /* The Ball */
+        #ball {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 50%;
+            /*
+                This is a key principle!
+                We set the transform origin to the bottom center.
+                This makes the "squash" happen at the point of impact,
+                not from the center of the ball.
+            */
+            transform: translateX(-50%);
+            transform-origin: 50% 100%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+        /* The Ground */
+        #ground {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background-color: #334155;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col min-h-screen">
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+    <!-- Navigation Bar -->
+    <nav class="bg-gray-800 text-white shadow-lg">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <!-- Logo/Brand -->
+                    <span class="text-2xl font-bold text-blue-400">Anim Principles</span>
+                </div>
+                <!-- Nav Links -->
+                <div class="hidden sm:flex sm:items-center sm:space-x-4">
+                    <a href="#" class="px-3 py-2 rounded-md text-sm font-medium text-white bg-gray-900" aria-current="page">Bouncing Ball</a>
+                    <a href="#" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">More Demos</a>
+                    <a href="#" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">About</a>
+                    <a href="#" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Contact</a>
+                </div>
+                <!-- Mobile Menu Button (placeholder) -->
+                <div class="sm:hidden flex items-center">
+                    <button class="text-gray-300 hover:text-white focus:outline-none">
+                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-jobs:
-  # Single deploy job since we're just deploying
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Upload entire repository
-          path: '.'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+    <!-- Main Content -->
+    <main class="flex-grow flex items-center justify-center p-4 my-8">
+        <div class="w-full max-w-4xl bg-white p-6 md:p-8 rounded-xl shadow-lg">
+            <header class="text-center mb-6">
+                            Notice how the ball stretches as it falls (gaining speed) and squashes flat when it hits the ground. This gives it a sense of mass and flexibility.
+                        </p>
+                    </li>
+                    <li>
+                        <strong class="text-blue-600">Timing & Spacing (Ease-In/Out)</strong>
+                        <p class="text-gray-700 text-sm">
+                            The ball accelerates due to gravity (spacing increases) and decelerates as it rises (spacing decreases). It "eases" (slows) into the peak of its arc before falling again.
+                        </p>
+                    </li>
+                    <li>
+                        <strong class="text-blue-600">Arcs</strong>
+                        <p class="text-gray-700 text-sm">
+                            While this is a simple vertical bounce, the physics engine creates a natural parabolic arc for the ball's movement over time.
+                        </p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-400 text-center p-6 mt-auto">
+        <p>&copy; 2025 Animation Principles. All rights reserved.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get elements
+            const ball = document.getElementById('ball');
+            const container = document.getElementById('animation-container');
+            const ground = document.getElementById('ground');
+            const startButton = document.getElementById('start-button');
+            const resetButton = document.getElementById('reset-button');
+
+            // --- Physics & Animation State ---
+            let positionY = 0;          // Initial position (top)
+            let velocityY = 0;          // Initial velocity
+            const gravity = 0.7;        // Acceleration due to gravity
+            const damping = 0.75;       // Energy loss on bounce (0 to 1)
+            let isAnimating = false;    // Animation loop flag
+            let animationFrameId = null; // To start/stop the loop
+
+            // --- Boundaries ---
+            let groundY;
+            let ballHeight;
+
+            function calculateBoundaries() {
+                // Get dynamic heights
+                groundY = container.clientHeight - ground.clientHeight;
+                ballHeight = ball.clientHeight;
+            }
+            
+            // Initial boundary calculation
+            calculateBoundaries();
+            
+            // Recalculate on window resize
+            window.addEventListener('resize', calculateBoundaries);
+
+            // --- The Animation Loop ---
+            function animate() {
+                // 1. Apply Physics
+                velocityY += gravity;     // Gravity pulls ball down
+                positionY += velocityY;     // Update position
+
+                // 2. Collision Detection
+                if (positionY + ballHeight > groundY) {
+                    // Hit the ground
+                    positionY = groundY - ballHeight; // Snap to ground
+                    velocityY = -velocityY * damping; // Reverse and dampen velocity
+                
+                    // --- Squash & Stretch (on impact) ---
+                    // The squash is proportional to the impact velocity
+                    const impactStrength = Math.abs(velocityY);
+                    let squashY = Math.max(0.4, 1 - impactStrength * 0.03); // Min 40% height
+                    let squashX = 1 + (1 - squashY); // Conserve volume
+                    
+                    // Apply squash transform
+                    ball.style.transform = `translateX(-50%) translateY(${positionY}px) scale(${squashX}, ${squashY})`;
+
+                    // Dampen further if velocity is very low to stop animation
+                    if (Math.abs(velocityY) < 2) {
+                        velocityY = 0;
+                    }
+
+                } else {
+                    // --- Squash & Stretch (in the air) ---
+                    // The stretch is proportional to the falling speed
+                    let stretchY = 1 + Math.abs(velocityY) * 0.01;
+                    stretchY = Math.min(stretchY, 1.25); // Max 25% stretch
+                    let stretchX = 1 - (stretchY - 1); // Conserve volume
+                    
+                    // Apply air transform
+                    ball.style.transform = `translateX(-50%) translateY(${positionY}px) scale(${stretchX}, ${stretchY})`;
+                }
+
+                // 3. Stop Condition
+                // If ball is on ground and not moving, stop.
+                if (Math.abs(velocityY) === 0 && positionY + ballHeight >= groundY) {
+                    stopAnimation();
+                    // Final reset to perfect circle
+                    ball.style.transform = `translateX(-50%) translateY(${positionY}px) scale(1, 1)`;
+                    return; 
+                }
+
+                // 4. Continue Loop
+                if (isAnimating) {
+                    animationFrameId = requestAnimationFrame(animate);
+                }
+            }
+
+            // --- Control Functions ---
+            function startAnimation() {
+                if (isAnimating) return; // Already running
+                isAnimating = true;
+                startButton.textContent = 'Pause';
+                animate();
+            }
+
+            function stopAnimation() {
+                if (!isAnimating) return; // Already stopped
+                isAnimating = false;
+                startButton.textContent = 'Start';
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+            }
+
+            function resetAnimation() {
+                stopAnimation();
+                positionY = 0;
+                velocityY = 0;
+                ball.style.transform = 'translateX(-50%) translateY(0px) scale(1, 1)';
+            }
+
+            // --- Event Listeners ---
+            startButton.addEventListener('click', () => {
+                if (isAnimating) {
+                    stopAnimation();
+                } else {
+                    startAnimation();
+                }
+            });
+
+            resetButton.addEventListener('click', resetAnimation);
+        });
+    </script>
+</body>
+</html>
